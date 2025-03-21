@@ -50,9 +50,9 @@
 #define X_MIN_PIN                          P0_00
 #define X_MAX_PIN                          P0_01
 #define Y_MIN_PIN                          P0_10
-#define Y_MAX_PIN                          P0_11
+#define Y_MAX_PIN                          P0_21
 #define Z_MIN_PIN                          P2_13
-#define Z_MAX_PIN                          P2_12
+#define Z_MAX_PIN                          P2_22
 
 //
 // Steppers
@@ -148,11 +148,7 @@
 //
 
 #ifndef SDCARD_CONNECTION
-  #if ENABLED(NO_LCD_SDCARD)
-    #define SDCARD_CONNECTION            ONBOARD
-  #else
-    #define SDCARD_CONNECTION                LCD
-  #endif
+  #define SDCARD_CONNECTION                  LCD
 #endif
 
 #if SD_CONNECTION_IS(LCD)

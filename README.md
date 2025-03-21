@@ -5,7 +5,7 @@ This is a customized fork of the original [Marlin firmware](https://github.com/M
 
 ---
 
-## 🔧 Thermistor Issue
+## 🔧 If you have Thermistor Issue
 
 ### Problem
 

@@ -166,11 +166,11 @@ inline void servo_probe_test() {
       SERIAL_ECHOLNPGM(". Check for BLTOUCH");
       bltouch._reset();
       bltouch._stow();
-      if (!PROBE_TRIGGERED()) {
+      if (probe_inverting == READ(PROBE_TEST_PIN)) {
         bltouch._set_SW_mode();
-        if (PROBE_TRIGGERED()) {
+        if (probe_inverting != READ(PROBE_TEST_PIN)) {
           bltouch._deploy();
-          if (!PROBE_TRIGGERED()) {
+          if (probe_inverting == READ(PROBE_TEST_PIN)) {
             bltouch._stow();
             SERIAL_ECHOLNPGM("= BLTouch Classic 1.2, 1.3, Smart 1.0, 2.0, 2.2, 3.0, 3.1 detected.");
             // Check for a 3.1 by letting the user trigger it, later
@@ -198,7 +198,7 @@ inline void servo_probe_test() {
         stow_state = READ(PROBE_TEST_PIN);
       }
 
-      if (PROBE_HIT_STATE == deploy_state) SERIAL_ECHOLNPGM("WARNING: " _PROBE_PREF "_ENDSTOP_HIT_STATE is probably wrong.");
+      if (probe_inverting != deploy_state) SERIAL_ECHOLNPGM("WARNING: " _PROBE_PREF "_ENDSTOP_HIT_STATE is probably wrong.");
 
       if (deploy_state != stow_state) {
         SERIAL_ECHOLNPGM("= Mechanical Switch detected");
@@ -294,7 +294,9 @@ void GcodeSuite::M43() {
   // 'E' Enable or disable endstop monitoring and return
   if (parser.seen('E')) {
     endstops.monitor_flag = parser.value_bool();
-    SERIAL_ECHOLN(F("endstop monitor "), endstops.monitor_flag ? F("en") : F("dis"), F("abled"));
+    SERIAL_ECHOPGM("endstop monitor ");
+    SERIAL_ECHOF(endstops.monitor_flag ? F("en") : F("dis"));
+    SERIAL_ECHOLNPGM("abled");
     return;
   }
 

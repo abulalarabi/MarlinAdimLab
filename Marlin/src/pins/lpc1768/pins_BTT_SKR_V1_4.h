@@ -48,9 +48,9 @@
 #endif
 
 #if ENABLED(I2C_EEPROM)
-  #define MARLIN_EEPROM_SIZE             0x8000U  // 32K
+  #define MARLIN_EEPROM_SIZE              0x8000  // 32K
 #elif ENABLED(SDCARD_EEPROM_EMULATION)
-  #define MARLIN_EEPROM_SIZE              0x800U  // 2K
+  #define MARLIN_EEPROM_SIZE               0x800  // 2K
 #endif
 
 //
@@ -286,8 +286,8 @@
 
 #elif HAS_WIRED_LCD
 
-  #if ENABLED(CTC_A10S_A13)
-    CONTROLLER_WARNING("BTT_SKR_V1_4", "CTC_A10S_A13")
+  #if ENABLED(ANET_FULL_GRAPHICS_LCD_ALT_WIRING)
+    CONTROLLER_WARNING("BTT_SKR_V1_4", "ANET_FULL_GRAPHICS_LCD_ALT_WIRING")
 
     /**
      * 1. Cut the tab off the LCD connector so it can be plugged into the "EXP1" connector the other way.
@@ -295,7 +295,7 @@
      *
      * !!! If you are unsure, ask for help! Your motherboard may be damaged in some circumstances !!!
      *
-     * The CTC_A10S_A13 connector plug:
+     * The ANET_FULL_GRAPHICS_LCD_ALT_WIRING connector plug:
      *
      *                BEFORE                     AFTER
      *                ------                     ------
@@ -519,7 +519,7 @@
     #define LCD_PINS_EN              EXP1_03_PIN
     #define LCD_PINS_D4              EXP1_05_PIN
 
-    #define LCD_SDSS_PIN             EXP2_04_PIN  // (16) J3-7 & AUX-4
+    #define LCD_SDSS                 EXP2_04_PIN  // (16) J3-7 & AUX-4
 
     #if ENABLED(FYSETC_MINI_12864)
       #define DOGLCD_CS              EXP1_03_PIN

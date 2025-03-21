@@ -20,9 +20,9 @@
  *
  */
 
-/*************************************
- * ui_api.cpp - Shared ExtUI methods *
- *************************************/
+/**************
+ * ui_api.cpp *
+ **************/
 
 /****************************************************************************
  *   Written By Marcio Teixeira 2018 - Aleph Objects, Inc.                  *
@@ -50,6 +50,7 @@
 #include "../../gcode/gcode.h"
 #include "../../module/motion.h"
 #include "../../module/planner.h"
+#include "../../module/probe.h"
 #include "../../module/temperature.h"
 #include "../../module/printcounter.h"
 #include "../../libs/duration_t.h"
@@ -81,10 +82,6 @@
   #include "../../feature/backlash.h"
 #endif
 
-#if HAS_BED_PROBE
-  #include "../../module/probe.h"
-#endif
-
 #if HAS_LEVELING
   #include "../../feature/bedlevel/bedlevel.h"
 #endif
@@ -109,7 +106,7 @@
   #include "../../feature/host_actions.h"
 #endif
 
-#if ENABLED(ADVANCED_PAUSE_FEATURE)
+#if M600_PURGE_MORE_RESUMABLE
   #include "../../feature/pause.h"
 #endif
 
@@ -293,7 +290,7 @@ namespace ExtUI {
     return GET_TEMP_ADJUSTMENT(thermalManager.degHotend(extruder - E0));
   }
 
-  celsius_t getTargetTemp_celsius(const heater_t heater) {
+  celsius_float_t getTargetTemp_celsius(const heater_t heater) {
     switch (heater) {
       #if HAS_HEATED_BED
         case BED: return GET_TEMP_ADJUSTMENT(thermalManager.degTargetBed());
@@ -305,19 +302,19 @@ namespace ExtUI {
     }
   }
 
-  celsius_t getTargetTemp_celsius(const extruder_t extruder) {
+  celsius_float_t getTargetTemp_celsius(const extruder_t extruder) {
     return GET_TEMP_ADJUSTMENT(thermalManager.degTargetHotend(extruder - E0));
   }
 
   //
   // Fan target/actual speed
   //
-  uint8_t getTargetFan_percent(const fan_t fan) {
+  float getTargetFan_percent(const fan_t fan) {
     UNUSED(fan);
     return TERN0(HAS_FAN, thermalManager.fanSpeedPercent(fan - FAN0));
   }
 
-  uint8_t getActualFan_percent(const fan_t fan) {
+  float getActualFan_percent(const fan_t fan) {
     UNUSED(fan);
     return TERN0(HAS_FAN, thermalManager.scaledFanSpeedPercent(fan - FAN0));
   }
@@ -346,7 +343,7 @@ namespace ExtUI {
     // This assumes the center is 0,0
     #if ENABLED(DELTA)
       if (axis != Z) {
-        max = SQRT(FLOAT_SQ(PRINTABLE_RADIUS) - sq(current_position[Y - axis])); // (Y - axis) == the other axis
+        max = SQRT(sq(float(DELTA_PRINTABLE_RADIUS)) - sq(current_position[Y - axis])); // (Y - axis) == the other axis
         min = -max;
       }
     #endif
@@ -675,18 +672,16 @@ namespace ExtUI {
     return planner.settings.axis_steps_per_mm[E_AXIS_N(extruder - E0)];
   }
 
-  #if ENABLED(EDITABLE_STEPS_PER_UNIT)
-    void setAxisSteps_per_mm(const_float_t value, const axis_t axis) {
-      planner.settings.axis_steps_per_mm[axis] = value;
-      planner.refresh_positioning();
-    }
+  void setAxisSteps_per_mm(const_float_t value, const axis_t axis) {
+    planner.settings.axis_steps_per_mm[axis] = value;
+    planner.refresh_positioning();
+  }
 
-    void setAxisSteps_per_mm(const_float_t value, const extruder_t extruder) {
-      UNUSED(extruder);
-      planner.settings.axis_steps_per_mm[E_AXIS_N(extruder - E0)] = value;
-      planner.refresh_positioning();
-    }
-  #endif
+  void setAxisSteps_per_mm(const_float_t value, const extruder_t extruder) {
+    UNUSED(extruder);
+    planner.settings.axis_steps_per_mm[E_AXIS_N(extruder - E0)] = value;
+    planner.refresh_positioning();
+  }
 
   feedRate_t getAxisMaxFeedrate_mm_s(const axis_t axis) {
     return planner.settings.max_feedrate_mm_s[axis];
@@ -765,24 +760,6 @@ namespace ExtUI {
     void setLinearAdvance_mm_mm_s(const_float_t value, const extruder_t extruder) {
       if (extruder < EXTRUDERS)
         planner.extruder_advance_K[E_INDEX_N(extruder - E0)] = constrain(value, 0, 10);
-    }
-  #endif
-
-  #if HAS_SHAPING
-    float getShapingZeta(const axis_t axis) {
-      return stepper.get_shaping_damping_ratio(AxisEnum(axis));
-    }
-    void setShapingZeta(const float zeta, const axis_t axis) {
-      if (!WITHIN(zeta, 0, 1)) return;
-      stepper.set_shaping_damping_ratio(AxisEnum(axis), zeta);
-    }
-    float getShapingFrequency(const axis_t axis) {
-      return stepper.get_shaping_frequency(AxisEnum(axis));
-    }
-    void setShapingFrequency(const float freq, const axis_t axis) {
-      constexpr float min_freq = float(uint32_t(STEPPER_TIMER_RATE) / 2) / shaping_time_t(-2);
-      if (freq == 0.0f || freq > min_freq)
-        stepper.set_shaping_frequency(AxisEnum(axis), freq);
     }
   #endif
 
@@ -918,7 +895,7 @@ namespace ExtUI {
 
   void setZOffset_mm(const_float_t value) {
     #if HAS_BED_PROBE
-      if (WITHIN(value, PROBE_OFFSET_ZMIN, PROBE_OFFSET_ZMAX))
+      if (WITHIN(value, Z_PROBE_OFFSET_RANGE_MIN, Z_PROBE_OFFSET_RANGE_MAX))
         probe.offset.z = value;
     #elif ENABLED(BABYSTEP_DISPLAY_TOTAL)
       babystep.add_mm(Z_AXIS, value - getZOffset_mm());
@@ -954,7 +931,6 @@ namespace ExtUI {
   #if HAS_BED_PROBE
     float getProbeOffset_mm(const axis_t axis) { return probe.offset.pos[axis]; }
     void setProbeOffset_mm(const_float_t val, const axis_t axis) { probe.offset.pos[axis] = val; }
-    probe_limits_t getBedProbeLimits() { return probe_limits_t({ probe.min_x(), probe.min_y(), probe.max_x(), probe.max_y() }); }
   #endif
 
   #if ENABLED(BACKLASH_GCODE)
@@ -1003,7 +979,7 @@ namespace ExtUI {
             feedrate_mm_s = MMM_TO_MMS(Z_PROBE_FEEDRATE_FAST);
             destination.set(current_position.x, current_position.y, Z_CLEARANCE_BETWEEN_PROBES);
             prepare_line_to_destination();
-            if (XY_PROBE_FEEDRATE_MM_S) feedrate_mm_s = XY_PROBE_FEEDRATE_MM_S;
+            feedrate_mm_s = XY_PROBE_FEEDRATE_MM_S;
             destination.set(x_target, y_target);
             prepare_line_to_destination();
           }
@@ -1070,7 +1046,7 @@ namespace ExtUI {
   void injectCommands_P(PGM_P const gcode) { queue.inject_P(gcode); }
   void injectCommands(char * const gcode)  { queue.inject(gcode); }
 
-  bool commandsInQueue() { return (planner.has_blocks_queued() || queue.has_commands_queued()); }
+  bool commandsInQueue() { return (planner.movesplanned() || queue.has_commands_queued()); }
 
   bool isAxisPositionKnown(const axis_t axis) { return axis_is_trusted((AxisEnum)axis); }
   bool isAxisPositionKnown(const extruder_t) { return axis_is_trusted(E_AXIS); }
@@ -1138,39 +1114,10 @@ namespace ExtUI {
   }
   void setUserConfirmed() { TERN_(HAS_RESUME_CONTINUE, wait_for_user = false); }
 
-  #if ENABLED(ADVANCED_PAUSE_FEATURE)
+  #if M600_PURGE_MORE_RESUMABLE
     void setPauseMenuResponse(PauseMenuResponse response) { pause_menu_response = response; }
-    PauseMode getPauseMode() { return pause_mode; }
-
     PauseMessage pauseModeStatus = PAUSE_MESSAGE_STATUS;
-
-    void stdOnPauseMode(
-      const PauseMessage message,
-      const PauseMode mode/*=PAUSE_MODE_SAME*/,
-      const uint8_t extruder/*=active_extruder*/
-    ) {
-      if (mode != PAUSE_MODE_SAME) pause_mode = mode;
-      pauseModeStatus = message;
-      switch (message) {
-        case PAUSE_MESSAGE_PARKING:  onUserConfirmRequired(GET_TEXT_F(MSG_PAUSE_PRINT_PARKING)); break;
-        case PAUSE_MESSAGE_CHANGING: onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_INIT)); break;
-        case PAUSE_MESSAGE_UNLOAD:   onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_UNLOAD)); break;
-        case PAUSE_MESSAGE_WAITING:  onUserConfirmRequired(GET_TEXT_F(MSG_ADVANCED_PAUSE_WAITING)); break;
-        case PAUSE_MESSAGE_INSERT:   onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_INSERT)); break;
-        case PAUSE_MESSAGE_LOAD:     onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_LOAD)); break;
-        case PAUSE_MESSAGE_PURGE:    onUserConfirmRequired(
-                                       GET_TEXT_F(TERN(ADVANCED_PAUSE_CONTINUOUS_PURGE, MSG_FILAMENT_CHANGE_CONT_PURGE, MSG_FILAMENT_CHANGE_PURGE))
-                                     );
-                                     break;
-        case PAUSE_MESSAGE_RESUME:   onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_RESUME)); break;
-        case PAUSE_MESSAGE_HEAT:     onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_HEAT)); break;
-        case PAUSE_MESSAGE_HEATING:  onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_HEATING)); break;
-        case PAUSE_MESSAGE_OPTION:   onUserConfirmRequired(GET_TEXT_F(MSG_FILAMENT_CHANGE_OPTION_HEADER)); break;
-        case PAUSE_MESSAGE_STATUS:   break;
-        default: break;
-      }
-    }
-
+    PauseMode getPauseMode() { return pause_mode;}
   #endif
 
   void printFile(const char *filename) {
@@ -1178,10 +1125,10 @@ namespace ExtUI {
   }
 
   bool isPrintingFromMediaPaused() {
-    return IS_SD_PAUSED();
+    return TERN0(HAS_MEDIA, IS_SD_PAUSED());
   }
 
-  bool isPrintingFromMedia() { return IS_SD_PRINTING() || IS_SD_PAUSED(); }
+  bool isPrintingFromMedia() { return TERN0(HAS_MEDIA, IS_SD_PRINTING() || IS_SD_PAUSED()); }
 
   bool isPrinting() {
     return commandsInQueue() || isPrintingFromMedia() || printJobOngoing() || printingIsPaused();
@@ -1191,11 +1138,7 @@ namespace ExtUI {
     return isPrinting() && (isPrintingFromMediaPaused() || print_job_timer.isPaused());
   }
 
-  bool isOngoingPrintJob() {
-    return isPrintingFromMedia() || printJobOngoing();
-  }
-
-  bool isMediaMounted() { return TERN0(HAS_MEDIA, card.isMounted()); }
+  bool isMediaInserted() { return TERN0(HAS_MEDIA, IS_SD_INSERTED()); }
 
   // Pause/Resume/Stop are implemented in MarlinUI
   void pausePrint()  { ui.pause_print(); }
@@ -1213,21 +1156,14 @@ namespace ExtUI {
     #endif
   }
 
-  void onStatusChanged_P(PGM_P const pstr) {
+  void onStatusChanged(FSTR_P const fstr) {
     #ifdef __AVR__
-      char msg[strlen_P(pstr) + 1];
-      strcpy_P(msg, pstr);
+      char msg[strlen_P(FTOP(fstr)) + 1];
+      strcpy_P(msg, FTOP(fstr));
       onStatusChanged(msg);
     #else
-      onStatusChanged(pstr);
+      onStatusChanged(FTOP(fstr));
     #endif
-  }
-
-  void onSurviveInKilled() {
-    thermalManager.disable_all_heaters();
-    flags.printer_killed = 0;
-    marlin_state = MarlinState::MF_RUNNING;
-    //SERIAL_ECHOLNPGM("survived at: ", millis());
   }
 
   FileList::FileList() { refresh(); }
@@ -1280,36 +1216,18 @@ namespace ExtUI {
 
 } // namespace ExtUI
 
-//
-// MarlinUI passthroughs to ExtUI
-//
-#if DISABLED(HAS_DWIN_E3V2)
-  void MarlinUI::init_lcd() { ExtUI::onStartup(); }
+// At the moment we hook into MarlinUI methods, but this could be cleaned up in the future
 
-  void MarlinUI::clear_lcd() {}
-  void MarlinUI::clear_for_drawing() {}
+void MarlinUI::init_lcd() { ExtUI::onStartup(); }
 
-  void MarlinUI::update() { ExtUI::onIdle(); }
+void MarlinUI::update() { ExtUI::onIdle(); }
 
-  void MarlinUI::kill_screen(FSTR_P const error, FSTR_P const component) {
-    using namespace ExtUI;
-    if (!flags.printer_killed) {
-      flags.printer_killed = true;
-      onPrinterKilled(error, component);
-    }
+void MarlinUI::kill_screen(FSTR_P const error, FSTR_P const component) {
+  using namespace ExtUI;
+  if (!flags.printer_killed) {
+    flags.printer_killed = true;
+    onPrinterKilled(error, component);
   }
-#endif
-
-#if ENABLED(ADVANCED_PAUSE_FEATURE)
-
-  void MarlinUI::pause_show_message(
-    const PauseMessage message,
-    const PauseMode mode/*=PAUSE_MODE_SAME*/,
-    const uint8_t extruder/*=active_extruder*/
-  ) {
-    ExtUI::onPauseMode(message, mode, extruder);
-  }
-
-#endif
+}
 
 #endif // EXTENSIBLE_UI

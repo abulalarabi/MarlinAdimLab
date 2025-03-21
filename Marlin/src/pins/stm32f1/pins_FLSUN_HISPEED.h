@@ -53,7 +53,7 @@
 //
 #if ANY(NO_EEPROM_SELECTED, FLASH_EEPROM_EMULATION)
   #define FLASH_EEPROM_EMULATION
-  #define EEPROM_PAGE_SIZE                0x800U  // 2K
+  #define EEPROM_PAGE_SIZE     (0x800U)           // 2K
   #define EEPROM_START_ADDRESS (0x8000000UL + (STM32_FLASH_SIZE) * 1024UL - (EEPROM_PAGE_SIZE) * 2UL)
   #define MARLIN_EEPROM_SIZE    EEPROM_PAGE_SIZE  // 2K
 #endif
@@ -95,6 +95,10 @@
 #define Z_MIN_PIN                           PA11  // -Z
 #define Z_MAX_PIN                           PC4   // +Z
 
+#ifndef FIL_RUNOUT_PIN
+  #define FIL_RUNOUT_PIN                    PA4   // MT_DET
+#endif
+
 //
 // Steppers
 //
@@ -121,7 +125,7 @@
  */
 #if HAS_TMC_UART
   // SoftwareSerial with one pin per driver
-  // Compatible with TMC2208/TMC2209 drivers
+  // Compatible with TMC2208 and TMC2209 drivers
   #define X_SERIAL_TX_PIN                   PA10  // RXD1
   #define Y_SERIAL_TX_PIN                   PA9   // TXD1
   #define Z_SERIAL_TX_PIN                   PC7   // IO1
@@ -165,7 +169,7 @@
 //
 // EXTRUDER
 //
-#if AXIS_HAS_UART(E0)
+#if AXIS_DRIVER_TYPE_E0(TMC2208) || AXIS_DRIVER_TYPE_E0(TMC2209)
   #define E0_SERIAL_TX_PIN                  PA8   // IO0
 #else
   // Motor current PWM pins
@@ -220,14 +224,10 @@
   //#define PS_ON_PIN                       PA3   // PW_CN /PW_OFF
 #endif
 
-#ifndef FIL_RUNOUT_PIN
-  #define FIL_RUNOUT_PIN                    PA4   // MT_DET_1
-#endif
-#ifndef FIL_RUNOUT2_PIN
-  #define FIL_RUNOUT2_PIN                   PE6   // MT_DET_2
-#endif
-#ifndef FIL_RUNOUT_STATE
-  #define FIL_RUNOUT_STATE                LOW
+#if HAS_TFT_LVGL_UI
+  #define MT_DET_1_PIN                      PA4   // MT_DET
+  #define MT_DET_2_PIN                      PE6
+  #define MT_DET_PIN_STATE                   LOW
 #endif
 
 //
@@ -254,6 +254,7 @@
   #define SD_SCK_PIN                        PC12
   #define SD_MISO_PIN                       PC8
   #define SD_MOSI_PIN                       PD2
+  #define SD_SS_PIN                         -1
   #define SD_DETECT_PIN                     PD12  // SD_CD (if -1 no detection)
 #else
   #define ONBOARD_SDIO
@@ -293,6 +294,9 @@
    */
   //#define TFT_RESET_PIN                   PC6   // FSMC_RST
   #define TFT_BACKLIGHT_PIN                 PD13
+
+  #define FSMC_DMA_DEV                      DMA2
+  #define FSMC_DMA_CHANNEL               DMA_CH5
 
   #define LCD_USE_DMA_FSMC
   #define FSMC_CS_PIN                       PD7   // NE4

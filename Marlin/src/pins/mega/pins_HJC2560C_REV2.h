@@ -81,7 +81,7 @@
 //
 // Temperature Sensors
 //
-#define TEMP_0_PIN                             8  // Analog Input
+#define TEMP_0_PIN                             6  // Analog Input
 #define TEMP_1_PIN                             9  // Analog Input
 #define TEMP_BED_PIN                          10  // Analog Input
 
@@ -99,7 +99,7 @@
 //
 // Misc. Functions
 //
-#define SD_SS_PIN                             53
+#define SDSS                                  53
 #define SD_DETECT_PIN                         39
 //#define LED_PIN                              8
 

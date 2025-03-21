@@ -211,8 +211,6 @@ void FWRetract::M207() {
 }
 
 void FWRetract::M207_report() {
-  TERN_(MARLIN_SMALL_BUILD, return);
-
   SERIAL_ECHOLNPGM_P(
       PSTR("  M207 S"), LINEAR_UNIT(settings.retract_length)
     , PSTR(" W"), LINEAR_UNIT(settings.swap_retract_length)
@@ -238,8 +236,6 @@ void FWRetract::M208() {
 }
 
 void FWRetract::M208_report() {
-  TERN_(MARLIN_SMALL_BUILD, return);
-
   SERIAL_ECHOLNPGM(
       "  M208 S", LINEAR_UNIT(settings.retract_recover_extra)
     , " W", LINEAR_UNIT(settings.swap_retract_recover_extra)
@@ -261,8 +257,6 @@ void FWRetract::M208_report() {
   }
 
   void FWRetract::M209_report() {
-    TERN_(MARLIN_SMALL_BUILD, return);
-
     SERIAL_ECHOLNPGM("  M209 S", AS_DIGIT(autoretract_enabled));
   }
 
