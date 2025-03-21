@@ -1,6 +1,8 @@
-<p align="center"><img src="buildroot/share/pixmaps/logo/marlin-outrun-nf-500.png" height="250" alt="MarlinFirmware's logo" /></p>
+<h1 align="center">Marlin 2.1 for AdimLab Gantry</h1>
+This is a fork of original Marlin firmware, configured for AdimLab Gantry. Please note that this is only for the white motherboard (with Atmega2560).
 
-<h1 align="center">Marlin 3D Printer Firmware</h1>
+## 
+One particular change that I made is with the 
 
 <p align="center">
     <a href="/LICENSE"><img alt="GPL-V3.0 License" src="https://img.shields.io/github/license/marlinfirmware/marlin.svg"></a>
